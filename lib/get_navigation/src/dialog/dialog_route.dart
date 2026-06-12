@@ -1,23 +1,18 @@
 import 'package:flutter/widgets.dart';
+
 import '../router_report.dart';
 
 class GetDialogRoute<T> extends PopupRoute<T> {
   GetDialogRoute({
     required RoutePageBuilder pageBuilder,
-    bool barrierDismissible = true,
-    String? barrierLabel,
-    Color barrierColor = const Color(0x80000000),
-    Duration transitionDuration = const Duration(milliseconds: 200),
-    RouteTransitionsBuilder? transitionBuilder,
-    RouteSettings? settings,
-  })  : widget = pageBuilder,
-        _barrierDismissible = barrierDismissible,
-        _barrierLabel = barrierLabel,
-        _barrierColor = barrierColor,
-        _transitionDuration = transitionDuration,
-        _transitionBuilder = transitionBuilder,
-        super(settings: settings) {
-    RouterReportManager.reportCurrentRoute(this);
+    this._barrierDismissible = true,
+    this._barrierLabel,
+    this._barrierColor = const Color(0x80000000),
+    this._transitionDuration = const Duration(milliseconds: 200),
+    this._transitionBuilder,
+    super.settings,
+  }) : widget = pageBuilder {
+    RouterReportManager.instance.reportCurrentRoute(this);
   }
 
   final RoutePageBuilder widget;
@@ -28,7 +23,7 @@ class GetDialogRoute<T> extends PopupRoute<T> {
 
   @override
   void dispose() {
-    RouterReportManager.reportRouteDispose(this);
+    RouterReportManager.instance.reportRouteDispose(this);
     super.dispose();
   }
 
@@ -47,26 +42,31 @@ class GetDialogRoute<T> extends PopupRoute<T> {
   final RouteTransitionsBuilder? _transitionBuilder;
 
   @override
-  Widget buildPage(BuildContext context, Animation<double> animation,
-      Animation<double> secondaryAnimation) {
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
     return Semantics(
-      child: widget(context, animation, secondaryAnimation),
       scopesRoute: true,
       explicitChildNodes: true,
+      child: widget(context, animation, secondaryAnimation),
     );
   }
 
   @override
-  Widget buildTransitions(BuildContext context, Animation<double> animation,
-      Animation<double> secondaryAnimation, Widget child) {
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
     if (_transitionBuilder == null) {
       return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: Curves.linear,
-          ),
-          child: child);
+        opacity: CurvedAnimation(parent: animation, curve: Curves.linear),
+        child: child,
+      );
     } // Some default transition
-    return _transitionBuilder!(context, animation, secondaryAnimation, child);
+    return _transitionBuilder(context, animation, secondaryAnimation, child);
   }
 }

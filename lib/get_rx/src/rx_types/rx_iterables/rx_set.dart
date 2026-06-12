@@ -1,45 +1,45 @@
-part of rx_types;
+part of '../rx_types.dart';
 
-class RxSet<E> extends SetMixin<E>
-    with NotifyManager<Set<E>>, RxObjectMixin<Set<E>>
-    implements RxInterface<Set<E>> {
-  RxSet([Set<E> initial = const {}]) {
-    _value = Set.from(initial);
-  }
+class RxSet<E> extends GetListenable<Set<E>>
+    with SetMixin<E>, RxObjectMixin<Set<E>> {
+  RxSet([super.initial = const {}]);
 
   /// Special override to push() element(s) in a reactive way
   /// inside the List,
   RxSet<E> operator +(Set<E> val) {
     addAll(val);
-    refresh();
+    //refresh();
     return this;
   }
 
-  void update(void fn(Iterable<E>? value)) {
+  void update(void Function(Iterable<E>? value) fn) {
     fn(value);
     refresh();
   }
 
-  @override
-  @protected
-  Set<E> get value {
-    RxInterface.proxy?.addListener(subject);
-    return _value;
-  }
+  // @override
+  // @protected
+  // Set<E> get value {
+  //   return subject.value;
+  //   // RxInterface.proxy?.addListener(subject);
+  //   // return _value;
+  // }
 
-  @override
-  @protected
-  set value(Set<E> val) {
-    if (_value == val) return;
-    _value = val;
-    refresh();
-  }
+  // @override
+  // @protected
+  // set value(Set<E> val) {
+  //   if (value == val) return;
+  //   value = val;
+  //   refresh();
+  // }
 
   @override
   bool add(E value) {
-    final val = _value.add(value);
-    refresh();
-    return val;
+    final hasAdded = this.value.add(value);
+    if (hasAdded) {
+      refresh();
+    }
+    return hasAdded;
   }
 
   @override
@@ -54,13 +54,13 @@ class RxSet<E> extends SetMixin<E>
   int get length => value.length;
 
   @override
-  E? lookup(Object? object) {
-    return value.lookup(object);
+  E? lookup(Object? element) {
+    return value.lookup(element);
   }
 
   @override
-  bool remove(Object? item) {
-    var hasRemoved = _value.remove(item);
+  bool remove(Object? value) {
+    var hasRemoved = this.value.remove(value);
     if (hasRemoved) {
       refresh();
     }
@@ -73,32 +73,32 @@ class RxSet<E> extends SetMixin<E>
   }
 
   @override
-  void addAll(Iterable<E> item) {
-    _value.addAll(item);
+  void addAll(Iterable<E> elements) {
+    value.addAll(elements);
     refresh();
   }
 
   @override
   void clear() {
-    _value.clear();
+    value.clear();
     refresh();
   }
 
   @override
   void removeAll(Iterable<Object?> elements) {
-    _value.removeAll(elements);
+    value.removeAll(elements);
     refresh();
   }
 
   @override
   void retainAll(Iterable<Object?> elements) {
-    _value.retainAll(elements);
+    value.retainAll(elements);
     refresh();
   }
 
   @override
-  void retainWhere(bool Function(E) E) {
-    _value.retainWhere(E);
+  void retainWhere(bool Function(E) test) {
+    value.retainWhere(test);
     refresh();
   }
 }

@@ -1,23 +1,34 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../../get.dart';
 import '../router_report.dart';
-import 'custom_transition.dart';
-import 'get_transition_mixin.dart';
-import 'route_middleware.dart';
-import 'transitions_type.dart';
 
-mixin PageRouteReportMixin<T> on Route<T> {
+@optionalTypeArgs
+mixin RouteReportMixin<T extends StatefulWidget> on State<T> {
   @override
-  void install() {
-    super.install();
-    RouterReportManager.reportCurrentRoute(this);
+  void initState() {
+    super.initState();
+    RouterReportManager.instance.reportCurrentRoute(this);
   }
 
   @override
   void dispose() {
     super.dispose();
-    RouterReportManager.reportRouteDispose(this);
+    RouterReportManager.instance.reportRouteDispose(this);
+  }
+}
+
+mixin PageRouteReportMixin<T> on Route<T> {
+  @override
+  void install() {
+    super.install();
+    RouterReportManager.instance.reportCurrentRoute(this);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    RouterReportManager.instance.reportRouteDispose(this);
   }
 }
 
@@ -28,8 +39,9 @@ class GetPageRoute<T> extends PageRoute<T>
   /// The [builder], [maintainState], and [fullscreenDialog] arguments must not
   /// be null.
   GetPageRoute({
-    RouteSettings? settings,
+    super.settings,
     this.transitionDuration = const Duration(milliseconds: 300),
+    this.reverseTransitionDuration = const Duration(milliseconds: 300),
     this.opaque = true,
     this.parameter,
     this.gestureWidth,
@@ -40,27 +52,32 @@ class GetPageRoute<T> extends PageRoute<T>
     this.customTransition,
     this.barrierDismissible = false,
     this.barrierColor,
-    this.binding,
-    this.bindings,
+    BindingsInterface? binding,
+    List<BindingsInterface> bindings = const [],
+    this.binds,
     this.routeName,
     this.page,
     this.title,
     this.showCupertinoParallax = true,
     this.barrierLabel,
     this.maintainState = true,
-    bool fullscreenDialog = false,
+    super.fullscreenDialog,
     this.middlewares,
-  }) : super(settings: settings, fullscreenDialog: fullscreenDialog);
+  }) : bindings = (binding == null) ? bindings : [...bindings, binding],
+       _middlewareRunner = MiddlewareRunner(middlewares);
 
   @override
   final Duration transitionDuration;
+  @override
+  final Duration reverseTransitionDuration;
+
   final GetPageBuilder? page;
   final String? routeName;
   //final String reference;
   final CustomTransition? customTransition;
-  final Bindings? binding;
+  final List<BindingsInterface> bindings;
   final Map<String, String>? parameter;
-  final List<Bindings>? bindings;
+  final List<Bind>? binds;
 
   @override
   final bool showCupertinoParallax;
@@ -85,33 +102,48 @@ class GetPageRoute<T> extends PageRoute<T>
   @override
   final bool maintainState;
 
+  final MiddlewareRunner _middlewareRunner;
+
   @override
   void dispose() {
     super.dispose();
-    final middlewareRunner = MiddlewareRunner(middlewares);
-    middlewareRunner.runOnPageDispose();
+    _middlewareRunner.runOnPageDispose();
+    _child = null;
   }
 
   Widget? _child;
 
   Widget _getChild() {
     if (_child != null) return _child!;
-    final middlewareRunner = MiddlewareRunner(middlewares);
 
-    final localbindings = [
-      if (bindings != null) ...bindings!,
-      if (binding != null) ...[binding!]
-    ];
-    final bindingsToBind = middlewareRunner.runOnBindingsStart(localbindings);
-    if (bindingsToBind != null) {
-      for (final binding in bindingsToBind) {
-        binding.dependencies();
+    final localBinds = [...?binds];
+
+    final bindingsToBind = _middlewareRunner.runOnBindingsStart(
+      bindings.isNotEmpty ? bindings : localBinds,
+    );
+
+    final pageToBuild = _middlewareRunner.runOnPageBuildStart(page)!;
+
+    if (bindingsToBind != null && bindingsToBind.isNotEmpty) {
+      if (bindingsToBind is List<BindingsInterface>) {
+        for (final item in bindingsToBind) {
+          final dep = item.dependencies();
+          if (dep is List<Bind>) {
+            _child = Binds(
+              binds: dep,
+              child: _middlewareRunner.runOnPageBuilt(pageToBuild()),
+            );
+          }
+        }
+      } else if (bindingsToBind is List<Bind>) {
+        _child = Binds(
+          binds: bindingsToBind,
+          child: _middlewareRunner.runOnPageBuilt(pageToBuild()),
+        );
       }
     }
 
-    final pageToBuild = middlewareRunner.runOnPageBuildStart(page)!;
-    _child = middlewareRunner.runOnPageBuilt(pageToBuild());
-    return _child!;
+    return _child ??= _middlewareRunner.runOnPageBuilt(pageToBuild());
   }
 
   @override

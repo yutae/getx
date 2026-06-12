@@ -8,12 +8,12 @@ class Wrapper extends StatelessWidget {
   final Transition? defaultTransition;
 
   const Wrapper({
-    Key? key,
+    super.key,
     this.child,
     this.namedRoutes,
     this.initialRoute,
     this.defaultTransition,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +23,11 @@ class Wrapper extends StatelessWidget {
       translations: WrapperTranslations(),
       locale: WrapperTranslations.locale,
       getPages: namedRoutes,
-      home: Scaffold(
-        body: child,
-      ),
+      home: namedRoutes == null
+          ? Scaffold(
+              body: child,
+            )
+          : null,
     );
   }
 }
@@ -37,12 +39,12 @@ class WrapperNamed extends StatelessWidget {
   final Transition? defaultTransition;
 
   const WrapperNamed({
-    Key? key,
+    super.key,
     this.child,
     this.namedRoutes,
     this.initialRoute,
     this.defaultTransition,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +57,8 @@ class WrapperNamed extends StatelessWidget {
 }
 
 class WrapperTranslations extends Translations {
-  static final fallbackLocale = Locale('en', 'US');
-  static Locale? get locale => Locale('en', 'US');
+  static const fallbackLocale = Locale('en', 'US');
+  static Locale? get locale => const Locale('en', 'US');
   @override
   Map<String, Map<String, String>> get keys => {
         'en_US': {

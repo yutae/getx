@@ -6,26 +6,25 @@ import '../controllers/root_controller.dart';
 import 'drawer.dart';
 
 class RootView extends GetView<RootController> {
+  const RootView({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return GetRouterOutlet.builder(
-      builder: (context, delegate, current) {
-        final title = current?.location;
-        return Scaffold(
-          drawer: DrawerWidget(),
-          appBar: AppBar(
-            title: Text(title ?? ''),
-            centerTitle: true,
-          ),
-          body: GetRouterOutlet(
-            initialRoute: Routes.HOME,
-            // anchorRoute: '/',
-            // filterPages: (afterAnchor) {
-            //   return afterAnchor.take(1);
-            // },
-          ),
-        );
-      },
+    return Scaffold(
+      drawer: const DrawerWidget(),
+      appBar: AppBar(
+        title: RouterListener(builder: (context) {
+          final title = context.location;
+          return Text(title);
+        }),
+        centerTitle: true,
+      ),
+      //body: HomeView(),
+
+      body: GetRouterOutlet(
+        initialRoute: Routes.home,
+        anchorRoute: '/',
+      ),
     );
   }
 }

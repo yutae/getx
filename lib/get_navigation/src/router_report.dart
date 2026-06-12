@@ -1,62 +1,72 @@
 import 'dart:collection';
 
-import 'package:flutter/widgets.dart';
-
 import '../../get.dart';
 
 class RouterReportManager<T> {
   /// Holds a reference to `Get.reference` when the Instance was
   /// created to manage the memory.
-  static final Map<Route?, List<String>> _routesKey = {};
+  final Map<T?, List<String>> _routesKey = {};
 
   /// Stores the onClose() references of instances created with `Get.create()`
   /// using the `Get.reference`.
   /// Experimental feature to keep the lifecycle and memory management with
   /// non-singleton instances.
-  static final Map<Route?, HashSet<Function>> _routesByCreate = {};
+  final Map<T?, HashSet<Function>> _routesByCreate = {};
+
+  static RouterReportManager? _instance;
+
+  RouterReportManager._();
+
+  static RouterReportManager get instance =>
+      _instance ??= RouterReportManager._();
+
+  static void dispose() {
+    _instance = null;
+  }
 
   void printInstanceStack() {
     Get.log(_routesKey.toString());
   }
 
-  static Route? _current;
+  T? _current;
 
   // ignore: use_setters_to_change_properties
-  static void reportCurrentRoute(Route newRoute) {
+  void reportCurrentRoute(T newRoute) {
     _current = newRoute;
   }
 
   /// Links a Class instance [S] (or [tag]) to the current route.
   /// Requires usage of `GetMaterialApp`.
-  static void reportDependencyLinkedToRoute(String depedencyKey) {
+  void reportDependencyLinkedToRoute(String dependencyKey) {
     if (_current == null) return;
     if (_routesKey.containsKey(_current)) {
-      _routesKey[_current!]!.add(depedencyKey);
+      _routesKey[_current!]!.add(dependencyKey);
     } else {
-      _routesKey[_current] = <String>[depedencyKey];
+      _routesKey[_current] = <String>[dependencyKey];
     }
   }
 
-  static void clearRouteKeys() {
+  void clearRouteKeys() {
     _routesKey.clear();
     _routesByCreate.clear();
   }
 
-  static void appendRouteByCreate(GetLifeCycleBase i) {
+  void appendRouteByCreate(GetLifeCycleMixin i) {
     _routesByCreate[_current] ??= HashSet<Function>();
     // _routesByCreate[Get.reference]!.add(i.onDelete as Function);
     _routesByCreate[_current]!.add(i.onDelete);
   }
 
-  static void reportRouteDispose(Route disposed) {
+  void reportRouteDispose(T disposed) {
     if (Get.smartManagement != SmartManagement.onlyBuilder) {
-      WidgetsBinding.instance!.addPostFrameCallback((_) {
-        _removeDependencyByRoute(disposed);
-      });
+      // Engine.instance.addPostFrameCallback((_) {
+      // Future.microtask(() {
+      _removeDependencyByRoute(disposed);
+      // });
     }
   }
 
-  static void reportRouteWillDispose(Route disposed) {
+  void reportRouteWillDispose(T disposed) {
     final keysToRemove = <String>[];
 
     _routesKey[disposed]?.forEach(keysToRemove.add);
@@ -73,7 +83,7 @@ class RouterReportManager<T> {
     }
 
     for (final element in keysToRemove) {
-      GetInstance().markAsDirty(key: element);
+      Get.markAsDirty(key: element);
 
       //_routesKey.remove(element);
     }
@@ -85,7 +95,7 @@ class RouterReportManager<T> {
   /// using `Get.smartManagement` as [SmartManagement.full] or
   /// [SmartManagement.keepFactory]
   /// Meant for internal usage of `GetPageRoute` and `GetDialogRoute`
-  static void _removeDependencyByRoute(Route routeName) {
+  void _removeDependencyByRoute(T routeName) {
     final keysToRemove = <String>[];
 
     _routesKey[routeName]?.forEach(keysToRemove.add);
@@ -102,11 +112,13 @@ class RouterReportManager<T> {
     }
 
     for (final element in keysToRemove) {
-      final value = GetInstance().delete(key: element);
+      final value = Get.delete(key: element);
       if (value) {
         _routesKey[routeName]?.remove(element);
       }
     }
+
+    _routesKey.remove(routeName);
 
     keysToRemove.clear();
   }
